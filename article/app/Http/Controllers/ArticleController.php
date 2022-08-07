@@ -3,7 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Article;
+use App\Models\Category;
 use Illuminate\Http\Request;
+use Flasher\Prime\FlasherInterface;
+use Illuminate\Support\Facades\Auth;
 
 class ArticleController extends Controller
 {
@@ -14,7 +17,9 @@ class ArticleController extends Controller
      */
     public function index()
     {
-        //
+        $articles = Article::paginate(5);
+
+        return view('articles.index', ['articles'=>$articles]);
     }
 
     /**
@@ -24,7 +29,8 @@ class ArticleController extends Controller
      */
     public function create()
     {
-        //
+        $data['category'] = Category::get();
+        return view('articles.add-article', $data);
     }
 
     /**
@@ -33,9 +39,25 @@ class ArticleController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
-    public function store(Request $request)
+    public function store(Request $request, FlasherInterface $flasher)
     {
-        //
+        $request->validate([
+            'title' => 'required',
+            'content' => 'required',
+            'image' => 'nullable',
+            'category_id' => 'required',
+        ]);
+        
+        $article = new Article;
+        $article->title = $request->title;
+        $article->content = $request->content;
+        $article->image = $request->image;
+        $article->user_id = Auth::id();
+        $article->category_id = $request->category_id;
+        $article->save();
+
+        $flasher->addSuccess('Berhasil menambahkan artikel');
+        return redirect()->route('articles');
     }
 
     /**
@@ -55,9 +77,11 @@ class ArticleController extends Controller
      * @param  \App\Models\Article  $article
      * @return \Illuminate\Http\Response
      */
-    public function edit(Article $article)
+    public function edit($id)
     {
-        //
+        $data['article'] = Article::where('id',$id)->first();
+        $data['category'] = Category::get();
+        return view('articles.edit-article', $data);
     }
 
     /**
@@ -67,9 +91,18 @@ class ArticleController extends Controller
      * @param  \App\Models\Article  $article
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, Article $article)
+    public function update(Request $request, $id, FlasherInterface $flasher)
     {
-        //
+        $article = Article::findOrFail($id);
+        $article->title = $request->title;
+        $article->content = $request->content;
+        $article->image = $request->image;
+        $article->user_id = Auth::id();
+        $article->category_id = $request->category_id;
+        $article->save();
+
+        $flasher->addSuccess('Berhasil mengubah data');
+        return back();
     }
 
     /**
@@ -78,8 +111,10 @@ class ArticleController extends Controller
      * @param  \App\Models\Article  $article
      * @return \Illuminate\Http\Response
      */
-    public function destroy(Article $article)
+    public function destroy($id, FlasherInterface $flasher)
     {
-        //
+        Article::findOrFail($id)->delete();
+        $flasher->addSuccess('Berhasil menghapus data');
+        return back();
     }
 }
